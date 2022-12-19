@@ -124,23 +124,15 @@ def redundant_term(a: np.matrix, b: np.matrix):
     delete_line = []
     for i in range(0, a.shape[0]):
         c = a[i, :]
+        a_bar = np.mat(np.delete(a, i, 0))
+        b_bar = np.mat(np.delete(b, i, 1))
         bounds = [(None, None)] * c.shape[1]
         res = linprog(-c, A_ub=a, b_ub=b, bounds=bounds, method='revised simplex')
-        if (-res.fun) + 0.0001 < float(b[0, i]):  # 由于计算时会有误差，为了防止误判加上0.0001
+        res_bar = linprog(-c, A_ub=a_bar, b_ub=b_bar, bounds=bounds, method='revised simplex')
+
+        if 0.0001 > res.fun - res_bar.fun > -0.0001:
             delete_line.append(i)
-        # 这里使用的方法是挑出A中某一行fi，计算fi*x在约束(A,b)上的最大值，如果这个值比fi对应的bi小，说明这项冗余，删除
-
-        else:
-            satisfy_edge = 0
-
-            for j in range(0, a.shape[0]):
-                if satisfy_edge > a.shape[1]:
-                    delete_line.append(i)
-                    break
-
-                elif 0.0001 > a[j, :] * np.mat(res.x).T - b[0, j] > -0.0001:
-                    satisfy_edge = satisfy_edge + 1
-        # 下面这些是用于去除刚好通过顶点的线，它们满足上面的条件，但只与区域有一个交点，便是顶点
+        # 有它没它都一样的话，说明该项冗余
 
     new_a = np.mat(np.delete(a, delete_line, 0))
     new_b = np.mat(np.delete(b, delete_line, 1))
@@ -475,7 +467,7 @@ if __name__ == "__main__":
 
     U_bounds = {'inf': -1, 'sup': 1}
 
-    x_initial = [-1.5, -0.75]
+    x_initial = [0, -0.75]
 
     system_parameter['P'], K = lqr_p_k_cal(system_parameter['A'],
                                            system_parameter['B'],
